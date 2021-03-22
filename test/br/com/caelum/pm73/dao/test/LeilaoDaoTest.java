@@ -1,6 +1,7 @@
 package br.com.caelum.pm73.dao.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -23,9 +24,6 @@ public class LeilaoDaoTest {
 	private UsuarioDao usuarioDao;
 	private LeilaoDao leilaoDao;
 	private Usuario usuario;
-	private Leilao leilaoUm;
-	private Leilao leilaoDois;
-	private Leilao leilaoTres;
 
 	@Before
 	public void setUp() {
@@ -33,9 +31,7 @@ public class LeilaoDaoTest {
 		this.usuarioDao = new UsuarioDao(session);
 		this.leilaoDao = new LeilaoDao(session);
 		this.usuario = new Usuario("Thiago", "thiago@gmail.com");
-		this.leilaoUm = new Leilao("Carro", 15000.0, usuario, false);
-		this.leilaoDois = new Leilao("Geladeira", 1500.0, usuario, true);
-		this.leilaoTres = new Leilao("Moto", 25500.0, usuario, false);
+
 		session.beginTransaction();
 	}
 
@@ -62,6 +58,9 @@ public class LeilaoDaoTest {
 
 	@Test
 	public void deveRetornarZeroCasoNaoHouveNenhumLeilaoEncerrado() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado().constroi();
+
 		leilaoUm.encerra();
 		leilaoDois.encerra();
 
@@ -75,17 +74,27 @@ public class LeilaoDaoTest {
 
 	@Test
 	public void retornaApenasLeiloesNaoUsados() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
 		usuarioDao.salvar(usuario);
 		leilaoDao.salvar(leilaoUm);
 		leilaoDao.salvar(leilaoDois);
 		leilaoDao.salvar(leilaoTres);
 
 		List<Leilao> novos = leilaoDao.novos();
-		assertEquals(2L, novos.size());
+		assertEquals(3L, novos.size());
 	}
 
 	@Test
 	public void retornaLeiloesCriadosHaMaisDeUmaSemanaAtras() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
 		Calendar dataAntiga = Calendar.getInstance();
 		dataAntiga.add(Calendar.DAY_OF_MONTH, -8);
 		leilaoUm.setDataAbertura(dataAntiga);
@@ -102,6 +111,11 @@ public class LeilaoDaoTest {
 
 	@Test
 	public void retornaLeiloesCriadosExatamentesUmaSemanaAtras() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
 		Calendar dataSetediasAtras = Calendar.getInstance();
 		dataSetediasAtras.add(Calendar.DAY_OF_MONTH, -7);
 
@@ -125,6 +139,106 @@ public class LeilaoDaoTest {
 		}
 
 		assertEquals(2L, antigos.size());
+	}
+
+	@Test
+	public void deveTrazerLeiloesNaoEncerradosPorPeriodo() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
+		Calendar intervaloInicial = Calendar.getInstance();
+		intervaloInicial.add(Calendar.DAY_OF_MONTH, -10);
+		Calendar intervaloFinal = Calendar.getInstance();
+
+		Calendar dataLeilaoUm = Calendar.getInstance();
+		dataLeilaoUm.add(Calendar.DAY_OF_MONTH, -22);
+		leilaoUm.setDataAbertura(dataLeilaoUm);
+
+		Calendar dataLeilaoDois = Calendar.getInstance();
+		dataLeilaoDois.add(Calendar.DAY_OF_MONTH, -4);
+		leilaoDois.setDataAbertura(dataLeilaoDois);
+
+		Calendar dataLeilaoTres = Calendar.getInstance();
+		dataLeilaoTres.add(Calendar.DAY_OF_MONTH, -4);
+		leilaoTres.setDataAbertura(dataLeilaoTres);
+
+		leilaoDao.salvar(leilaoUm);
+		leilaoDao.salvar(leilaoDois);
+		leilaoDao.salvar(leilaoTres);
+
+		usuarioDao.salvar(usuario);
+
+		List<Leilao> porPeriodo = leilaoDao.porPeriodo(intervaloInicial, intervaloFinal);
+
+		assertEquals(1L, porPeriodo.size());
+	}
+
+	@Test
+	public void deveTrazerLeiloesEncerradosPorPeriodo() {
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
+		Calendar intervaloInicial = Calendar.getInstance();
+		intervaloInicial.add(Calendar.DAY_OF_MONTH, -10);
+		Calendar intervaloFinal = Calendar.getInstance();
+
+		Calendar dataLeilaoUm = Calendar.getInstance();
+		dataLeilaoUm.add(Calendar.DAY_OF_MONTH, -22);
+		leilaoUm.setDataAbertura(dataLeilaoUm);
+
+		Calendar dataLeilaoDois = Calendar.getInstance();
+		dataLeilaoDois.add(Calendar.DAY_OF_MONTH, -4);
+		leilaoDois.setDataAbertura(dataLeilaoDois);
+
+		Calendar dataLeilaoTres = Calendar.getInstance();
+		dataLeilaoTres.add(Calendar.DAY_OF_MONTH, -4);
+		leilaoTres.setDataAbertura(dataLeilaoTres);
+
+		leilaoDao.salvar(leilaoUm);
+		leilaoDao.salvar(leilaoDois);
+		leilaoDao.salvar(leilaoTres);
+
+		usuarioDao.salvar(usuario);
+
+		List<Leilao> porPeriodo = leilaoDao.porPeriodo(intervaloInicial, intervaloFinal);
+
+		assertEquals(1L, porPeriodo.size());
+	}
+
+	@Test
+	public void retornaListaDeLeiloesEmQueOUsuarioDeuLance() {
+
+		Leilao leilaoUm = new LeilaoBuilder().comNome("Carro").comValor(15000.0).comDono(usuario).constroi();
+		Leilao leilaoDois = new LeilaoBuilder().comNome("Geladeira").comValor(1500.0).comDono(usuario).encerrado()
+				.constroi();
+		Leilao leilaoTres = new LeilaoBuilder().comNome("Moto").comValor(25500.0).comDono(usuario).constroi();
+
+		leilaoDao.salvar(leilaoUm);
+		leilaoDao.salvar(leilaoDois);
+		leilaoDao.salvar(leilaoTres);
+
+		usuarioDao.salvar(usuario);
+
+		List<Leilao> listaLeiloesDoUsuario = leilaoDao.listaLeiloesDoUsuario(usuario);
+
+		assertEquals(0, listaLeiloesDoUsuario.size());
+
+	}
+
+	@Test
+	public void deletaUmLeilao() {
+		Leilao leilao = new LeilaoBuilder().comNome("Bicicleta").comValor(2000.0).comDono(usuario).constroi();
+		
+		usuarioDao.salvar(usuario);
+		leilaoDao.salvar(leilao);
+		session.flush();
+		leilaoDao.deleta(leilao);
+
+		assertNull(leilaoDao.porId(leilao.getId()));
 	}
 
 }

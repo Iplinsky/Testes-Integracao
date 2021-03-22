@@ -1,6 +1,7 @@
 package br.com.caelum.pm73.dao.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import org.hibernate.Session;
@@ -44,6 +45,42 @@ public class UsuarioDaoTest {
 	public void deveRetornarNullAoBuscarPeloNomeEEmail() {
 		Usuario usuarioDoBanco = usuarioDao.porNomeEEmail("João Joaquim", "joao@joaquim.com.br");
 		assertNull(usuarioDoBanco);
+	}
+
+	@Test
+	public void deveDeletarUsuario() {
+		Usuario usuario = new Usuario("João Joaquim", "joao@joaquim.com.br");
+
+		usuarioDao.salvar(usuario);
+		usuarioDao.deletar(usuario);
+
+		session.flush();
+		session.clear();
+
+		Usuario usuarioDeletado = usuarioDao.porNomeEEmail(usuario.getNome(), usuario.getEmail());
+
+		assertNull(usuarioDeletado);
+	}
+
+	@Test
+	public void verificaUsuarioAposAlteracao() {
+		Usuario novoUsuario = new Usuario("Izabel", "izabel@gmail.com");
+		usuarioDao.salvar(novoUsuario);
+
+		novoUsuario.setNome("Thiago");
+		novoUsuario.setEmail("thiago@gmail.com");
+		usuarioDao.atualizar(novoUsuario);
+
+		session.flush();
+
+		Usuario nomeOriginal = usuarioDao.porNomeEEmail("Izabel", "izabel@gmail.com");
+		Usuario nomeAtualizado = usuarioDao.porNomeEEmail("Thiago", "thiago@gmail.com");
+
+		assertNull(nomeOriginal);
+		assertNotNull(nomeAtualizado);
+		System.out.println(nomeOriginal);
+		System.out.println(nomeAtualizado.getNome());
+
 	}
 
 }
